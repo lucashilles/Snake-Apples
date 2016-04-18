@@ -1,0 +1,343 @@
+﻿<!DOCTYPE html>
+<!--
+Código: Lucas Hilleshein dos Santos.
+Não copie, código sem otimizar e com bugs... xD
+-->
+<html>
+<head>
+<title>Snake & Apples</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+
+<body>
+<p style="font-family:arial; font-size:15px">Use as setas ou WASD para movimentar</p><br>
+<canvas id="canvasArea" width="500px" height="500px" style="border:1px solid #000; margin: 0 auto;"></canvas>
+<p style="font-family:arial; font-size:15px"><input type="checkbox" id="debug"> Debug?</p>
+<p id="hud" style="font-family:arial; font-size:15px"></p>
+<p id="cabeca" style="font-family:arial; font-size:15px"></p>
+<p id="Comida" style="font-family:arial; font-size:15px"></p><br><br>
+<p style="font-family:arial; font-size:15px">© Lucas Hilleshein dos Santos, 2016</p>
+
+<script type="text/javascript">
+var requestAnimFrame = (function(){
+    return window.requestAnimationFrame    ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame    ||
+        window.oRequestAnimationFrame      ||
+        window.msRequestAnimationFrame     ||
+        function(callback){
+            window.setTimeout(callback, 1000 / 60);
+        };
+})();
+
+var canvas = document.getElementById('canvasArea');
+var ctx = canvas.getContext('2d');
+
+var debug = true;
+var i = 0;
+var p = 0;
+var xMax = canvas.width;
+var yMax = canvas.height;
+var vivo = true;
+var dentro = false;
+//Circulo
+var raio = 12;
+var xCentro = 0;
+var yCentro = 0;
+var tamanhoModulo = 25;
+var coluna = 1;
+var linha = 1;
+var moveDir = 4; //1-cima 4-direita CCW
+var lastDir = 1;
+//cronometro
+var lastTime = 0;
+var ultimo = 0;
+var pontuacao = 0;
+
+var m1 = new Modulo(6,10);
+var m2 = new Modulo(7,10);
+var m3 = new Modulo(8,10);
+var m4 = new Modulo(9,10);
+var m5 = new Modulo(10,10);
+
+var poolModulos = [m1,m2,m3,m4,m5];
+
+var totalModulos = poolModulos.length;
+document.addEventListener("keydown", teclaPressionada, false);
+
+
+
+//Verifica qual tecla foi pressionada
+function teclaPressionada(e) {
+	if(e.keyCode==87 || e.keyCode==38){
+		//pracima = true;
+    moveDir = 1;
+	}
+	else if(e.keyCode==65 || e.keyCode==37){
+		//praesquerda = true;
+    moveDir = 2;
+	}
+	else if(e.keyCode==83 || e.keyCode==40){
+		//prabaixo = true;
+    moveDir = 3;
+	}
+	else if(e.keyCode==68 || e.keyCode==39){
+		//pradireita = true;
+    moveDir = 4;
+	}
+}
+
+function dGrade(){
+	xTotal = canvas.width/tamanhoModulo - 1;
+	yTotal = canvas.height/tamanhoModulo - 1;
+	for(i=1; i <= xTotal; i++){
+		ctx.beginPath();
+		ctx.strokeStyle = '#d1d1d1';
+		ctx.lineWidth = 1;
+		ctx.moveTo(i*25,0);
+		ctx.lineTo(i*25,canvas.height);
+		ctx.stroke();
+		ctx.closePath();
+	}
+	for(i=1; i <= yTotal; i++){
+		ctx.beginPath();
+		ctx.strokeStyle = '#d1d1d1';
+		ctx.lineWidth = 1;
+		ctx.moveTo(0,i*25);
+		ctx.lineTo(canvas.width,i*25);
+		ctx.stroke();
+		ctx.closePath();
+	}
+}
+
+function Modulo(coluna,linha) {
+	this.Coluna = coluna;
+	this.Linha = linha;
+	//poolModulos.push(this);
+}
+
+function addModulo (){
+	var novoModulo = "m" + (totalModulos+1);
+  if(poolModulos[0].Linha == poolModulos[1].Linha) {
+    if(poolModulos[0].Coluna < poolModulos[1].Coluna){
+      this[novoModulo] = new Modulo(poolModulos[0].Coluna - 1,poolModulos[0].Linha);
+    	totalModulos += 1;
+    }
+    else {
+      this[novoModulo] = new Modulo(poolModulos[0].Coluna + 1,poolModulos[0].Linha);
+    	totalModulos += 1;
+    }
+  }
+  else if(poolModulos[0].Coluna == poolModulos[1].Coluna) {
+    if(poolModulos[0].Linha < poolModulos[1].Linha){
+      this[novoModulo] = new Modulo(poolModulos[0].Coluna,poolModulos[0].Linha - 1);
+    	totalModulos += 1;
+    }
+    else {
+      this[novoModulo] = new Modulo(poolModulos[0].Coluna,poolModulos[0].Linha + 1);
+      totalModulos += 1;
+    }
+  }
+  poolModulos.unshift(this[novoModulo]);
+}
+
+function movePlayer(){
+	pool = poolModulos.length-1;
+	for(i=0;i<=pool;i++){
+		if(i==pool){
+			if(moveDir==1){
+				poolModulos[i].Linha -= 1;
+			}
+			else if(moveDir==2){
+				poolModulos[i].Coluna -= 1;
+			}
+			else if(moveDir==3){
+				poolModulos[i].Linha += 1;
+			}
+			else if(moveDir==4){
+				poolModulos[i].Coluna += 1;
+			}
+		}
+		else {
+			poolModulos[i].Coluna = poolModulos[i+1].Coluna;
+			poolModulos[i].Linha = poolModulos[i+1].Linha;
+		}
+    lastDir = moveDir;
+	}
+}
+
+function verificaMove(){
+  if ((moveDir==1 && lastDir==3)||
+      (moveDir==2 && lastDir==4)||
+      (moveDir==3 && lastDir==1)||
+      (moveDir==4 && lastDir==2)){
+        moveDir = lastDir;
+      }
+
+	p = poolModulos.length-1;
+	coluna = poolModulos[p].Coluna;
+	linha = poolModulos[p].Linha;
+	//verifica os limites de tela
+	if((moveDir == 1 && linha == 1)||
+		(moveDir == 2 && coluna == 1)||
+		(moveDir == 3 && linha == 20)||
+		(moveDir == 4 && coluna == 20)){
+		//morreu
+		vivo = false;
+		return;
+	}
+	else if (moveDir == 1) {
+		pool = poolModulos.length-2;
+		for(i=0;i<=pool;i++){
+			if((poolModulos[i].Linha == (linha - 1)) && (poolModulos[i].Coluna == coluna)){
+				//morreu
+				vivo = false;
+				return;
+			}
+		}
+    if (vivo){
+      movePlayer();
+    }
+	}
+	else if (moveDir == 2) {
+		pool = poolModulos.length-2;
+		for(i=0;i<=pool;i++){
+			if((poolModulos[i].Coluna == (coluna - 1)) && (poolModulos[i].Linha == linha)){
+				//morreu
+				vivo = false;
+				return;
+			}
+		}
+    if (vivo){
+      movePlayer();
+    }
+	}
+	else if (moveDir == 3) {
+		pool = poolModulos.length-2;
+		for(i=0;i<=pool;i++){
+			if((poolModulos[i].Linha == (linha + 1)) && (poolModulos[i].Coluna == coluna)){
+				//morreu
+				vivo = false;
+				return;
+			}
+		}
+    if (vivo){
+      movePlayer();
+    }
+	}
+	else if (moveDir == 4) {
+		pool = poolModulos.length-2;
+		for(i=0;i<=pool;i++){
+			if((poolModulos[i].Coluna == (coluna + 1)) && (poolModulos[i].Linha == linha)){
+				//morreu
+				vivo = false;
+				return;
+			}
+		}
+    if(vivo){
+      movePlayer();
+    }
+	}
+  //pega a comida
+  pool = poolModulos.length-1;
+  if(poolModulos[pool].Coluna == xCentro && poolModulos[pool].Linha == yCentro){
+    xCentro = 0;
+    yCentro = 0;
+    addModulo();
+    pontuacao += 1;
+  }
+}
+
+function verificaComida(){
+  pool = poolModulos.length-1;
+  for(i=0;i<=pool;i++){
+    if((poolModulos[i].Coluna == xCentro) && (poolModulos[i].Linha == yCentro)){
+      dentro = true;
+    }
+  }
+}
+
+//Desenha o modulo
+function dModulo(coluna, linha){
+	ctx.beginPath();
+	ctx.strokeStyle = 'blue';
+	ctx.rect((coluna*25)-25, (linha*25)-25, tamanhoModulo, tamanhoModulo);
+	ctx.stroke();
+	ctx.closePath();
+}
+
+//Desenha a Comida
+function dComida(xCentro, yCentro){
+	ctx.beginPath();
+	ctx.strokeStyle = 'red';
+  ctx.fillStyle = 'red';
+	ctx.arc((xCentro * 25 - 12.5),(yCentro * 25 - 12.5),raio,0*Math.PI,2*Math.PI);
+	ctx.stroke();
+  ctx.fill();
+	ctx.closePath();
+}
+
+//Limpa o quadro
+function limparCaixa(){
+	ctx.setTransform(1, 0, 0, 1, 0, 0);
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+//Renderiza as informações
+function draw(){
+	limparCaixa();
+  if (document.getElementById("debug").checked) {
+    debug = true;
+  }
+  else {
+    debug = false;
+  }
+	if(debug){
+		dGrade();
+	}
+  if (xCentro == 0 && yCentro == 0) {
+    xCentro = Math.floor(Math.random()*20+1);
+    yCentro = Math.floor(Math.random()*20+1);
+    verificaComida();
+    while (dentro) {
+      xCentro = Math.floor(Math.random()*20+1);
+      yCentro = Math.floor(Math.random()*20+1);
+      dentro = false;
+      verificaComida();
+    }
+  }
+  dComida(xCentro,yCentro);
+  pool = poolModulos.length;
+  for(i=0;i<pool;i++){
+    dModulo(poolModulos[i].Coluna,poolModulos[i].Linha);
+  }
+  if ((Date.now() - ultimo>=150) && vivo){
+    verificaMove();
+    ultimo = Date.now();
+  }
+
+  if (debug) {
+    document.getElementById("hud").innerHTML = (pontuacao) + " pts<br>Tamanho: " + poolModulos.length;
+    pool = poolModulos.length-1;
+    document.getElementById("cabeca").innerHTML = "Cabeça - X: " + poolModulos[pool].Coluna + " Y: " + poolModulos[pool].Linha + "<br>Comida - X: " + xCentro + " Y: " + yCentro;
+  }
+  else {
+    document.getElementById("hud").innerHTML = (pontuacao) + " pts";
+    document.getElementById("cabeca").innerHTML = "";
+  }
+
+
+  var now = Date.now();
+  var dt = (now - lastTime) / 1000.0;
+
+  lastTime = now;
+  requestAnimFrame(draw);
+}
+
+  lastTime = Date.now();
+  gameloop = draw();
+
+//gameloop = setInterval(draw,10); //100fps
+</script>
+</body>
+</html>
