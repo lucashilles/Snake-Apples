@@ -1,2 +1,4 @@
 # Snake-Apples
-HTML5 Snake Game
+Jogo Snake & Apples.
+
+Sistema principal de renderização: Canvas Context.
